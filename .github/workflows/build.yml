@@ -26,6 +26,11 @@ jobs:
         echo "GRADLE_HOME=/opt/gradle-8.4" >> $GITHUB_ENV
         echo "/opt/gradle-8.4/bin" >> $GITHUB_PATH
 
+    - name: 生成调试 Keystore
+      working-directory: app
+      run: |
+        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+
     - name: 构建 Release APK
       run: gradle assembleRelease --no-daemon
 
