@@ -18,18 +18,19 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: 设置 Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.4'
+    - name: 安装 Gradle 8.4
+      run: |
+        wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
+        unzip -q /tmp/gradle.zip -d /opt
+        echo "GRADLE_HOME=/opt/gradle-8.4" >> $GITHUB_ENV
+        echo "/opt/gradle-8.4/bin" >> $GITHUB_PATH
 
-    - name: 赋予执行权限
-      run: chmod +x gradlew
+    - name: 验证 Gradle 安装
+      run: gradle --version
 
     - name: 构建 Release APK
-      run: ./gradlew assembleRelease --no-daemon --stacktrace
+      run: gradle assembleRelease --no-daemon
 
     - name: 复制 APK
       run: |
@@ -71,3 +72,4 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
