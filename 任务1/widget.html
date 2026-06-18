@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DeepSeek 余额</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        .widget-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .widget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 8px;
+            opacity: 0.9;
+        }
+
+        .widget-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .brand-name {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .refresh-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.9);
+        }
+
+        .refresh-btn.spin svg {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .widget-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+        }
+
+        .balance-display {
+            text-align: center;
+        }
+
+        .balance-amount {
+            font-size: 56px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -2px;
+            text-shadow: 0 2px 20px rgba(102, 126, 234, 0.3);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+
+        .balance-amount.large {
+            font-size: 72px;
+        }
+
+        .balance-amount.error {
+            font-size: 32px;
+            opacity: 0.6;
+        }
+
+        .balance-unit {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .balance-status {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+
+        .status-dot.offline {
+            background: #f87171;
+        }
+
+        .status-dot.loading {
+            background: #fbbf24;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .widget-footer {
+            padding: 8px 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .update-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+        }
+
+        .settings-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 设置面板 */
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .settings-overlay.show {
+            transform: translateY(0);
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.7;
+        }
+
+        .close-btn:active {
+            opacity: 1;
+        }
+
+        .settings-content {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-group small {
+            display: block;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 6px;
+        }
+
+        .switch-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+        }
+
+        .switch-label {
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .switch {
+            width: 48px;
+            height: 28px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .switch:checked {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .switch::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .switch:checked::after {
+            left: 22px;
+        }
+
+        .switch {
+            position: relative;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .test-result {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .test-result.show {
+            display: block;
+        }
+
+        .test-result.success {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .test-result.error {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(255, 255, 255, 0.95);
+            color: #1a1a2e;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 200;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* 深色玻璃效果 */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 360px) {
+            .balance-amount {
+                font-size: 48px;
+            }
+            .balance-amount.large {
+                font-size: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <header class="widget-header">
+            <div class="widget-brand">
+                <div class="brand-icon">DS</div>
+                <span class="brand-name">DeepSeek</span>
+            </div>
+            <button id="refreshBtn" class="refresh-btn" aria-label="刷新">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                </svg>
+            </button>
+        </header>
+
+        <main class="widget-content">
+            <div class="balance-display">
+                <div class="balance-amount" id="balanceAmount">--</div>
+                <div class="balance-unit" id="balanceUnit">请先配置</div>
+                <div class="balance-status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">未连接</span>
+                </div>
+            </div>
+        </main>
+
+        <footer class="widget-footer">
+            <span class="update-time" id="updateTime">--</span>
+            <button class="settings-btn" id="openSettings">⚙️ 设置</button>
+        </footer>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <header class="settings-header">
+            <span class="settings-title">API 配置</span>
+            <button class="close-btn" id="closeSettings">✕</button>
+        </header>
+        <div class="settings-content">
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>API 地址</label>
+                    <input type="url" id="apiUrl" value="https://api.deepseek.com/user/balance" required>
+                </div>
+                <div class="form-group">
+                    <label>认证 Header</label>
+                    <input type="text" id="apiKeyHeader" value="Authorization">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label>余额字段路径</label>
+                    <input type="text" id="jsonPath" value="balance_infos[0].total_balance">
+                    <small>支持数组：balance_infos[0].total_balance</small>
+                </div>
+                <div class="form-group">
+                    <label>货币单位</label>
+                    <input type="text" id="currencyUnit" value="¥">
+                </div>
+                <div class="form-group">
+                    <label>刷新间隔（秒）</label>
+                    <input type="number" id="refreshInterval" min="10" max="3600" value="120">
+                </div>
+                <div class="switch-wrapper">
+                    <span class="switch-label">Bearer Token 格式</span>
+                    <input type="checkbox" id="useBearer" class="switch" checked>
+                </div>
+                <button type="submit" class="btn-primary">保存并刷新</button>
+                <button type="button" class="btn-secondary" id="testBtn">测试连接</button>
+                <div class="test-result" id="testResult"></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const STORAGE_KEY = 'deepseek_widget_config';
+        const els = {
+            balanceAmount: document.getElementById('balanceAmount'),
+            balanceUnit: document.getElementById('balanceUnit'),
+            updateTime: document.getElementById('updateTime'),
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            openSettings: document.getElementById('openSettings'),
+            closeSettings: document.getElementById('closeSettings'),
+            settingsOverlay: document.getElementById('settingsOverlay'),
+            settingsForm: document.getElementById('settingsForm'),
+            apiUrl: document.getElementById('apiUrl'),
+            apiKeyHeader: document.getElementById('apiKeyHeader'),
+            apiKey: document.getElementById('apiKey'),
+            jsonPath: document.getElementById('jsonPath'),
+            currencyUnit: document.getElementById('currencyUnit'),
+            refreshInterval: document.getElementById('refreshInterval'),
+            useBearer: document.getElementById('useBearer'),
+            testBtn: document.getElementById('testBtn'),
+            testResult: document.getElementById('testResult'),
+            toast: document.getElementById('toast')
+        };
+
+        let config = null;
+        let refreshTimer = null;
+        let nextRefreshTime = null;
+
+        loadConfig();
+
+        els.refreshBtn.addEventListener('click', () => fetchBalance(true));
+        els.openSettings.addEventListener('click', () => els.settingsOverlay.classList.add('show'));
+        els.closeSettings.addEventListener('click', () => els.settingsOverlay.classList.remove('show'));
+        els.settingsForm.addEventListener('submit', handleSave);
+        els.testBtn.addEventListener('click', testConnection);
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(() => {});
+        }
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    config = JSON.parse(raw);
+                    if (config.apiUrl && config.apiKey) {
+                        fetchBalance();
+                        startAutoRefresh();
+                        return;
+                    }
+                }
+            } catch (e) {}
+            setStatus('warning', '请先配置');
+        }
+
+        function handleSave(e) {
+            e.preventDefault();
+            config = {
+                apiUrl: els.apiUrl.value.trim(),
+                apiKeyHeader: els.apiKeyHeader.value.trim() || 'Authorization',
+                apiKey: els.apiKey.value.trim(),
+                jsonPath: els.jsonPath.value.trim() || 'balance',
+                currencyUnit: els.currencyUnit.value.trim() || '¥',
+                refreshInterval: parseInt(els.refreshInterval.value, 10) || 120,
+                useBearer: els.useBearer.checked
+            };
+            if (!config.apiUrl || !config.apiKey) {
+                showToast('请填写 API 地址和 Key');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            els.settingsOverlay.classList.remove('show');
+            showToast('配置已保存');
+            fetchBalance(true);
+            startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            const interval = (config.refreshInterval || 120) * 1000;
+            nextRefreshTime = Date.now() + interval;
+            refreshTimer = setInterval(() => {
+                fetchBalance();
+                nextRefreshTime = Date.now() + interval;
+            }, interval);
+        }
+
+        setInterval(() => {
+            if (nextRefreshTime && els.updateTime) {
+                const remaining = Math.max(0, Math.ceil((nextRefreshTime - Date.now()) / 1000));
+                els.updateTime.textContent = `${remaining}秒后刷新`;
+            }
+        }, 1000);
+
+        function buildHeaders(cfg) {
+            const headers = { 'Accept': 'application/json' };
+            if (cfg.useBearer) {
+                headers['Authorization'] = 'Bearer ' + cfg.apiKey;
+            } else {
+                headers[cfg.apiKeyHeader] = cfg.apiKey;
+            }
+            return headers;
+        }
+
+        function fetchBalance(force) {
+            if (!config || !config.apiUrl) {
+                setStatus('warning', '请先配置');
+                return;
+            }
+
+            els.refreshBtn.classList.add('spin');
+            setStatus('loading', '加载中...');
+
+            fetch(config.apiUrl, {
+                method: 'GET',
+                headers: buildHeaders(config),
+                cache: force ? 'no-store' : 'default'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                const balance = extractValue(data, config.jsonPath);
+                if (balance === null || balance === undefined || isNaN(parseFloat(balance))) {
+                    throw new Error('无法解析余额');
+                }
+                displayBalance(balance);
+                setStatus('online', '在线');
+            })
+            .catch(err => {
+                setStatus('offline', '错误');
+                els.balanceAmount.textContent = '⚠';
+                els.balanceAmount.className = 'balance-amount error';
+                console.error(err);
+            })
+            .finally(() => {
+                setTimeout(() => els.refreshBtn.classList.remove('spin'), 500);
+            });
+        }
+
+        function testConnection() {
+            const cfg = {
+                apiUrl: els.apiUrl.value.trim(),
+                apiKeyHeader: els.apiKeyHeader.value.trim() || 'Authorization',
+                apiKey: els.apiKey.value.trim(),
+                useBearer: els.useBearer.checked
+            };
+            if (!cfg.apiUrl || !cfg.apiKey) {
+                showToast('请填写 API 地址和 Key');
+                return;
+            }
+            els.testResult.className = 'test-result show';
+            els.testResult.textContent = '测试中...';
+            els.testResult.className = 'test-result show';
+
+            fetch(cfg.apiUrl, {
+                method: 'GET',
+                headers: buildHeaders(cfg)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                const balance = extractValue(data, els.jsonPath.value);
+                els.testResult.textContent = '✓ 连接成功！余额：' + (balance !== null ? balance : '未找到');
+                els.testResult.className = 'test-result show success';
+            })
+            .catch(err => {
+                els.testResult.textContent = '✗ 连接失败：' + err.message;
+                els.testResult.className = 'test-result show error';
+            });
+        }
+
+        function displayBalance(balance) {
+            const num = parseFloat(balance);
+            els.balanceAmount.textContent = formatNumber(num);
+            els.balanceAmount.className = 'balance-amount' + (num >= 100 ? ' large' : '');
+            els.balanceUnit.textContent = config.currencyUnit;
+            els.updateTime.textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function setStatus(type, text) {
+            els.statusDot.className = 'status-dot ' + (type !== 'online' ? type : '');
+            els.statusText.textContent = text;
+        }
+
+        function extractValue(obj, path) {
+            if (!path) return obj;
+            const tokens = path.replace(/\[(\d+)\]/g, '.$1').split('.').filter(Boolean);
+            let current = obj;
+            for (let i = 0; i < tokens.length; i++) {
+                if (current === null || current === undefined) return null;
+                const key = /^\d+$/.test(tokens[i]) ? parseInt(tokens[i], 10) : tokens[i];
+                current = current[key];
+            }
+            return current;
+        }
+
+        function formatNumber(num) {
+            if (isNaN(num)) return '--';
+            return num.toLocaleString('zh-CN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function showToast(msg) {
+            els.toast.textContent = msg;
+            els.toast.classList.add('show');
+            setTimeout(() => els.toast.classList.remove('show'), 2500);
+        }
+    </script>
+</body>
+</html>
