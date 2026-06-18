@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg_start">#1a1a2e</color>
+    <color name="widget_bg_middle">#16213e</color>
+    <color name="widget_bg_end">#0f3460</color>
+    <color name="widget_text_primary">#ffffff</color>
+    <color name="widget_text_secondary">#b0b0d0</color>
+    <color name="widget_text_tertiary">#80809a</color>
+    <color name="widget_accent">#667eea</color>
+    <color name="widget_status_online">#4ade80</color>
+    <color name="widget_status_offline">#f87171</color>
+    <color name="widget_status_loading">#fbbf24</color>
+    <color name="app_bg">#0f0f1e</color>
+    <color name="app_card_bg">#1a1a2e</color>
+    <color name="app_input_bg">#252540</color>
+    <color name="app_input_border">#3d3d5c</color>
+    <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
+</resources>
